@@ -8,7 +8,7 @@ Prostate adenocarcinoma is a type of cancer that forms in the prostate gland. It
 
 # Methods
 
-To identify trends of prostate adenocarcinoma, four different statistical methods were used on the data, which was obtained from the cBioPortal website and GDC Data Portal, specifically the TCGA-PRAD project with "Transcriptome Profiling" as the data category. The two sources describe the same list of patients, but with different traits. Data exportation was done on R and the code can be found on the attached Github repo. The TCGA data contains traits of 551 prostate adenocarcinoma patients. All the traits stored and visualized as an array to make general observations. For the gene expression, only genes that the average expression count greater than 15000 and there are 503 genes that fall into this category. \\
+To identify trends of prostate adenocarcinoma, four different statistical methods were used on the data, which was obtained from the cBioPortal website and GDC Data Portal, specifically the TCGA-PRAD project with "Transcriptome Profiling" as the data category. The two sources describe the same list of patients, but with different traits. Data exportation was done on R and the code can be found on the attached Github repo. The TCGA data contains traits of 551 prostate adenocarcinoma patients. All the traits stored and visualized as an array to make general observations. For the gene expression, only genes that the average expression count greater than 15000 and there are 503 genes that fall into this category.
 
 ## Survival Analysis
 
@@ -20,7 +20,7 @@ The next analysis was performed to find differences between gene expressions. In
 
 ## Hierarchical Clustering
 
-Hierarchical clustering then was performed to cluster the cancer by subtypes using dendograms. This was then visualized using a heatmap. Since the TCGA data contains the normalized RNA transcriptome profiling gene expressions, the clusters would look like groups of genes that are similar in expression.  \\
+Hierarchical clustering then was performed to cluster the cancer by subtypes using dendograms. This was then visualized using a heatmap. Since the TCGA data contains the normalized RNA transcriptome profiling gene expressions, the clusters would look like groups of genes that are similar in expression. 
 
 ## Principal Component Analysis
 
@@ -78,13 +78,8 @@ As shown by the PCA and Hierarchical Clustering, almost all patients fall into t
 
 # References
 
-
 [1] “Types of prostate cancer: Common, rare and more,” Cancer Treatment Centers of America, 21-Sep-2021. [Online] [Accessed: 10-Dec-2021]. 
-<br />
 [2] “Prostate Adenocarcinoma (TCGA, PanCancer Atlas),” CBioPortal for Cancer Genomics. [Online] [Accessed: 10-Dec-2021]. 
-<br />
 [3] “The Human Protein Atlas of ENSG00000124767-GLO1,” Expression of glo1 in cancer - summary. [Online]. Available: https://www.proteinatlas.org/ENS
-G00000124767-GLO1/pathology. [Accessed: 10-Dec-2021].  
-<br />
+G00000124767-GLO1/pathology. [Accessed: 10-Dec-2021].
 [4] “TGM4,” Expression of TGM4 in cancer - summary - The human protein atlas. [Online]. Available: https://www.proteinatlas.org/ENSG00000163810-TGM4/pathology. [Accessed: 10-Dec-2021]. 
-
