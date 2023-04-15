@@ -1,0 +1,259 @@
+---
+title: "BMEG310 2021W - Final Project"
+output: html_document
+Group: 34
+Group members: Joshua Park, Clare Sheedy, Olivia Melani Putri
+Cancer Type: Prostate Adenocarcinoma (PCGA)
+Assignment due date: December 10, 2021, 11:59PM
+---
+
+# Set Directory
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "~/Desktop/BMEG310-2021/Group_Project/TCGA_data")
+getwd()
+```
+
+# Load Libraries
+```{r}
+BiocManager::install("TCGAbiolinks")
+BiocManager::install("SummarizedExperiment")
+BiocManager::install("survival")
+BiocManager::install("survminer")
+BiocManager::install("DESeq2")
+BiocManager::install("AnnotationDbi")
+BiocManager::install("org.Hs.eg.db")
+BiocManager::install("org.Mm.eg.db")
+BiocManager::install("pathview")
+BiocManager::install("clusterProfiler")
+BiocManager::install("gage")
+BiocManager::install("gageData")
+
+install.packages("pheatmap", repos="https://cran.r-project.org/")
+install.packages("ggplot2", repos="https://cran.r-project.org/")
+install.packages('hash', repos="https://cran.r-project.org/")
+
+library("hash")
+library("TCGAbiolinks")
+library("SummarizedExperiment")
+library("survival")
+library("survminer")
+library("DESeq2")
+library("AnnotationDbi")
+library("org.Mm.eg.db")
+library("org.Hs.eg.db")
+library("clusterProfiler")
+```
+
+# Extract data from TCGA
+```{r}
+data_clinical_patient <- read.delim("data_clinical_patient.txt", header = TRUE, sep = "\t", dec = ".")
+data_mutations_extended <- read.delim("data_mutations_extended.txt", header = TRUE, sep = "\t", dec= ".")
+
+GDCprojects = getGDCprojects()
+GDCprojects[c("project_id", "name")]
+
+TCGAbiolinks:::getProjectSummary("TCGA-PRAD")
+
+query_TCGA = GDCquery(
+  project = "TCGA-PRAD",
+  data.category = "Transcriptome Profiling", # parameter enforced by GDCquery
+  experimental.strategy = "RNA-Seq",
+  workflow.type = "HTSeq - Counts")
+
+prad_res = getResults(query_TCGA) # make results as table
+# head(lihc_res) # data of the first 6 patients.
+colnames(prad_res) # columns present in the table
+
+GDCdownload(query = query_TCGA)
+
+tcga_data = GDCprepare(query_TCGA)
+
+RNAseq_matrix = assay(tcga_data)
+
+colnames(colData(tcga_data))
+```
+
+
+# Survival Analysis
+
+```{r}
+clinical = tcga_data@colData
+dim(clinical)
+
+patientIdToStage = hash()
+
+for (row in 5:nrow(data_clinical_patient)) { 
+  patientId = data_clinical_patient[row,]$X.Patient.Identifier 
+  if (length(patientIdToStage[[patientId]]) == 0) {
+    patientIdToStage[[patientId]] = data_clinical_patient[row,]$American.Joint.Committee.on.Cancer.Tumor.Stage.Code 
+  }
+}
+
+clinical[, "tumor_stage"] = "_"
+
+for (row in 1:nrow(clinical)) { 
+  patientId = clinical[row,]$patient 
+  if (length(patientIdToStage[[patientId]]) > 0) {
+    clinical[row, "tumor_stage"] = patientIdToStage[[patientId]]  
+  }
+}
+
+# we are only interested in the "Primary solid Tumor" cases for survival
+clin_df = clinical[clinical$definition == "Primary solid Tumor",
+                    c("patient",
+                      "vital_status",
+                      "days_to_death",
+                      "days_to_last_follow_up",
+                      "gender",
+                      "tumor_stage", "ethnicity", "primary_diagnosis")]
+
+# create a new boolean variable that has TRUE for dead patients
+# and FALSE for live patients
+clin_df$deceased = clin_df$vital_status == "Dead"
+
+# create an "overall survival" variable that is equal to days_to_death
+# for dead patients, and to days_to_last_follow_up for patients who
+# are still alive
+clin_df$overall_survival = ifelse(clin_df$deceased,
+                                   clin_df$days_to_death,
+                                   clin_df$days_to_last_follow_up)
+
+# show first 10 samples
+fit = survfit(Surv(clin_df$overall_survival, clin_df$deceased) ~ tumor_stage, data=clin_df)
+fit2 = survfit(Surv(clin_df$overall_survival, clin_df$deceased) ~ ethnicity, data=clin_df)
+fit3 = survfit(Surv(clin_df$overall_survival, clin_df$deceased) ~ primary_diagnosis, data=clin_df)
+
+ggsurvplot(fit, data=clin_df, pval=T)
+ggsurvplot(fit2, data=clin_df, pval=T)
+ggsurvplot(fit3, data=clin_df, pval=T)
+
+```
+
+# Heatmap and hierarchical
+```{r}
+RNAseqFiltered= RNAseq_matrix[which(rowMeans(RNAseq_matrix, na.rm=TRUE)>15000),]
+heatmap(scale(t(RNAseqFiltered)))
+```
+
+# Differential Expression
+```{r}
+#change the column names
+#for ( col in 1:ncol(RNAseqFiltered)){
+#    colnames(RNAseqFiltered)[col] =  sub("-01A.*|-11A.*|-01B.*|-11B.*|-06A.*", "", #colnames(RNAseqFiltered)[col])
+#}
+
+colData = as.matrix(clinical[c("tumor_stage")])
+countData = RNAseqFiltered
+
+dds = DESeqDataSetFromMatrix(countData = countData, colData= colData, design= ~tumor_stage)
+dds= DESeq(dds)
+
+res1 = results(dds, contrast=c("tumor_stage", "T2A", "T2B"))
+plotMA(res1, ylim= c(-2,2), main='T2A vs T2B')
+summary(res1)
+
+res2 = results(dds, contrast=c("tumor_stage", "T2A", "T2C"))
+plotMA(res2, ylim= c(-2,2), main='T2A vs T2C')
+summary(res2)
+
+res3 = results(dds, contrast=c("tumor_stage", "T2A", "T3A"))
+plotMA(res3, ylim= c(-2,2), main='T2A vs T3A')
+summary(res3)
+
+res4 = results(dds, contrast=c("tumor_stage", "T2A", "T3B"))
+plotMA(res4, ylim= c(-2,2), main='T2A vs T3B')
+summary(res4)
+
+res5 = results(dds, contrast=c("tumor_stage", "T2A", "T4"))
+plotMA(res5, ylim= c(-2,2), main='T2A vs T4')
+summary(res5)
+
+res6 = results(dds, contrast=c("tumor_stage", "T2B", "T2C"))
+plotMA(res6, ylim= c(-2,2), main='T2B vs T2C')
+summary(res6)
+
+res7 = results(dds, contrast=c("tumor_stage", "T2B", "T3A"))
+plotMA(res7, ylim= c(-2,2), main='T2B vs T3A')
+summary(res7)
+
+res8 = results(dds, contrast=c("tumor_stage", "T2B", "T3B"))
+plotMA(res8, ylim= c(-2,2), main='T2B vs T3B')
+summary(res8)
+
+res9 = results(dds, contrast=c("tumor_stage", "T2B", "T4"))
+plotMA(res9, ylim= c(-2,2), main='T2B vs T4')
+summary(res9)
+
+res10 = results(dds, contrast=c("tumor_stage", "T2C", "T3A"))
+plotMA(res10, ylim= c(-2,2), main='T2C vs T3A')
+summary(res10)
+
+res11 = results(dds, contrast=c("tumor_stage", "T2C", "T3B"))
+plotMA(res11, ylim= c(-2,2), main='T2C vs T3B')
+summary(res11)
+
+res12 = results(dds, contrast=c("tumor_stage", "T2C", "T4"))
+plotMA(res12, ylim= c(-2,2), main='T2C vs T4')
+summary(res12)
+
+res13 = results(dds, contrast=c("tumor_stage", "T3A", "T3B"))
+plotMA(res13, ylim= c(-2,2), main='T3A vs T3B')
+summary(res13)
+
+res14 = results(dds, contrast=c("tumor_stage", "T3A", "T4"))
+plotMA(res14, ylim= c(-2,2), main='T3A vs T4')
+summary(res14)
+
+res15 = results(dds, contrast=c("tumor_stage", "T3B", "T4"))
+plotMA(res15, ylim= c(-2,2), main='T3B vs T4')
+summary(res15)
+```
+
+# upregulated genes and down regulated genes
+```{r}
+res11$symbol = mapIds(org.Hs.eg.db,
+                    keys=row.names(res11), 
+                    column="SYMBOL",
+                    keytype="ENSEMBL",
+                    multiVals="first")
+
+res11$entrez = mapIds(org.Hs.eg.db,
+                    keys=row.names(res11), 
+                    column="ENTREZID",
+                    keytype="ENSEMBL",
+                    multiVals="first")
+
+res11$name =   mapIds(org.Hs.eg.db,
+                    keys=row.names(res11), 
+                    column="GENENAME",
+                    keytype="ENSEMBL",
+                    multiVals="first")
+
+# 10 top significant genes with the strongest upregulation
+order.up = res11[ order( res11$log2FoldChange, decreasing=TRUE), ]
+upreggenes = row.names(order.up)[1:10]
+
+# get the 10 top significant genes with the strongest down-regulation.
+order.down = res11[ order( res11$log2FoldChange ), ]
+downreggenes = row.names(order.down)[1:10]
+
+upreggenes
+downreggenes
+
+```
+
+# PCA
+```{r}
+pca_res <- prcomp(t(countData), scale. = TRUE)
+score <- pca_res$x
+
+score = as.data.frame(score)
+score$color <- as.factor(tcga_data$primary_diagnosis)
+
+#plotting the PCA plot
+plt <- ggplot(score, aes(x=PC1, y=PC2, color=color)) + geom_point(size = 4)
+plt
+
+```
+
