@@ -10,19 +10,19 @@ Prostate adenocarcinoma is a type of cancer that forms in the prostate gland. It
 
 To identify trends of prostate adenocarcinoma, four different statistical methods were used on the data, which was obtained from the cBioPortal website and GDC Data Portal, specifically the TCGA-PRAD project with "Transcriptome Profiling" as the data category. The two sources describe the same list of patients, but with different traits. Data exportation was done on R and the code can be found on the attached Github repo. The TCGA data contains traits of 551 prostate adenocarcinoma patients. All the traits stored and visualized as an array to make general observations. For the gene expression, only genes that the average expression count greater than 15000 and there are 503 genes that fall into this category. \\
 
-# Survival Analysis
+## Survival Analysis
 
 Based on first observations of the raw data, the most prominent and fully documented traits were tumor stage, ethnicity, and primary diagnosis (disease type or cancer subtype). The data related to tumor stage was obtained from cBioPortal, while the data related to two other traits were obtained from GDC Data Portal. Once the matrix with the most prominent patient traits was synthesized, survival analysis was done using survfit and ggsurvplot functions from the survival and survminer package. We also plotted Kaplan-Meier curves and calculated the p-values to see whether or not the traits are statistically significant. 
 
-# Differential Expression
+## Differential Expression
 
 The next analysis was performed to find differences between gene expressions. In differential expression, the normalized read count data from GDC Data Portal is used to perform a statistical analysis to identify differences in expression levels between genes. After that, all the possible pairs of tumor stages were listed, which sums to 15 pairs when excluding the undefined categories (details attached in Appendix). Next, we created MA plots for each pair and obtained the  LFC$>$0 and LFC$<$0 values from each analysis. The pair with the greatest LFC$>$0 and LFC$<$0 value was chosen for further analysis using the mapIds function from AnnotationDbi to identify the top 10 upregulated genes as well as the top 10 downregulated genes, and to further determine the most significant genes. From the MA-plots, we can visualize the difference in gene expressions between two stages from each pair. The y-axis shows the log ratio and the x-axis shows the mean average of counts. The MA plots were also made to determine whether the data has been properly normalized or not. 
 
-# Hierarchical Clustering
+## Hierarchical Clustering
 
 Hierarchical clustering then was performed to cluster the cancer by subtypes using dendograms. This was then visualized using a heatmap. Since the TCGA data contains the normalized RNA transcriptome profiling gene expressions, the clusters would look like groups of genes that are similar in expression.  \\
 
-# Principal Component Analysis
+## Principal Component Analysis
 
 Principal Component Analysis (PCA) is a method of data analysis which aims to compute the principal components of the data that is being analyzed. PCA provides dimension reduction of the data which makes it easier to analyze. Principal components are not related to each other, and are used to determine which factors may be useful for further analysis. The top 2 PCs were than used to create a scatter plot and to categorize the data which may correspond to specific trait.
 
